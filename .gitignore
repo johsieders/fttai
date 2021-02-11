@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/src/cola/cola_public/
+/src/cola/cola_public_1.1.zip
+/src/cola/log_000.pickle
