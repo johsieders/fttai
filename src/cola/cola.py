@@ -1,4 +1,6 @@
+#%%
 ## to be copied from cola.ipynb
+
 
 
 # from https://mccormickml.com/2019/07/22/BERT-fine-tuning
@@ -8,7 +10,35 @@
 # QAware GmbH, Munich
 # 10.2.2021
 
+#%%
 
+# uncomment this if import fails
+# !pip install wget
+
+import os
+import zipfile
+import wget
+
+#%%
+
+# download and unzip raw data
+url = 'https://nyu-mll.github.io/CoLA/cola_public_1.1.zip'
+
+zipped_file = 'cola_public_1.1.zip'
+zipped_dir = './cola_public_1.1/'
+unzipped_file = './cola_public/raw/in_domain_train.tsv'
+
+if not os.path.exists(zipped_file):
+    wget.download(url, zipped_file)
+print('download successful')
+
+if not os.path.exists(zipped_dir):
+    zip = zipfile.ZipFile(zipped_file)
+    zip.extractall()
+
+print('unzipped file now at ' + unzipped_file)
+
+#%%
 
 # uncomment this if import fails
 # !pip install transformers
@@ -29,22 +59,26 @@ from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSamp
 from transformers import BertTokenizer, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 
 
-
+#%%
 
 class Logger(object):
     def __init__(self):
         self.protocol = []
         self.counter = 0
+        self.char_counter = 0
 
     def log(self, input: any) -> None:
         print(self.counter, end='')  # I am working
         self.counter = (self.counter + 1) % 10
+        self.char_counter =(self.char_counter + 1) % 80
+        if self.char_counter == 0:
+          print()
         self.protocol.append((perf_counter(), input))
 
     def getProtocol(self) -> list:
         return self.protocol
 
-
+#%%
 
 class Learner(object):
     def __init__(self, module: torch.nn.Module,
@@ -116,7 +150,7 @@ class Learner(object):
             self.train(dataloader, logger)
         return logger.getProtocol()
 
-
+#%%
 
 def getDevice(cuda_desired: bool) -> torch.device:
     """
@@ -126,7 +160,7 @@ def getDevice(cuda_desired: bool) -> torch.device:
     return torch.device('cuda') if cuda_desired and torch.cuda.is_available() \
         else torch.device('cpu')
 
-
+#%%
 
 def readSentencesLabels(filename: str,
                        n_sentences: int,
@@ -143,9 +177,9 @@ def readSentencesLabels(filename: str,
     df = pd.read_csv(filename, delimiter=delimiter, nrows=n_sentences, header=None)
     return df[col_sentence].values.tolist(), df[col_label].values.tolist()
 
+#%%
 
-
-def encode(sentences: list,
+def tokenize(sentences: list,
            tokenizer: BertTokenizer,
            max_length: int) -> tuple:
     """
@@ -180,7 +214,7 @@ def encode(sentences: list,
 
     return token_ids, attention_masks
 
-
+#%%
 
 def getDataloader(token_ids: list,
                   attention_masks: list,
@@ -224,7 +258,7 @@ def getDataloader(token_ids: list,
 
     return train_dataloader, test_dataloader
 
-
+#%%
 
 def getModule(device: torch.device) -> torch.nn.Module:
     module = BertForSequenceClassification.from_pretrained(
@@ -239,7 +273,7 @@ def getModule(device: torch.device) -> torch.nn.Module:
         module.cuda()
     return module
 
-
+#%%
 
 def getTokenizer() -> BertTokenizer:
     """
@@ -247,7 +281,7 @@ def getTokenizer() -> BertTokenizer:
     """
     return BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-
+#%%
 
 def getOptimizer(module: torch.nn.Module,
                  lr: float,
@@ -260,7 +294,7 @@ def getOptimizer(module: torch.nn.Module,
     """
     return AdamW(module.parameters(), lr=lr, eps=eps)
 
-
+#%%
 
 def getSchedulerFactory(optimizer: torch.optim.Optimizer) -> Callable:
     """
@@ -275,16 +309,16 @@ def getSchedulerFactory(optimizer: torch.optim.Optimizer) -> Callable:
     return factory
 
 
-
+#%%
 
 # put constants in a dictionary
 cfg = {'seed': 2,
-       'batch_size': 8,
-       'n_sentences': 100,     # number of sentences to read
+       'batch_size': 32,
+       'n_sentences': 1000,  # number of sentences to read
        'max_length': 64,      # max length of sentence (guess or find out)
        'split_factor': 0.8,   # share of training sentences
-       'cuda_desired': False, # True if cuda desired
-       'lr': 2e-5,            # learning rate of optimizer
+       'cuda_desired': True,  # True if cuda desired
+       'lr': 3e-5,            # learning rate of optimizer
        'eps': 1e-8,           # stop criterion of optimizer
        'n_epochs' : None}     # number of epochs
 
@@ -302,7 +336,7 @@ random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-
+#%%
 
 # extract at most n sentences and labels; n = n_sentences
 unzipped_file = './cola_public/raw/in_domain_train.tsv'
@@ -314,7 +348,9 @@ sentences, labels = readSentencesLabels(unzipped_file, n_sentences, col_sentence
 n = len(sentences)
 k = len(list(filter(lambda x: x == 1, labels)))
 
+print(n, k)
 
+#%%
 
 # define the algorithm
 device = getDevice(cuda_desired)  # device depending on choice and availability of cuda
@@ -324,14 +360,14 @@ optimizer = getOptimizer(module, lr, eps)
 schedulerFactory = getSchedulerFactory(optimizer)  # learner can be called with different values of n_epoch
 steps_per_epoch = int(len(sentences) * split_factor / batch_size) + 1
 
-# encode sentences to token ids and attention masks
-token_ids, attention_masks = encode(sentences, tokenizer, max_length)
+# tokenize sentences to token ids and attention masks
+token_ids, attention_masks = tokenize(sentences, tokenizer, max_length)
 
 # put token ids, attention masks and labels into a dataloader
 train_dataloader, test_dataloader = \
     getDataloader(token_ids, attention_masks, labels, split_factor, batch_size, device)
 
-
+#%%
 
 # build a learner and get going
 cfg['n_epochs'] = 4
@@ -351,3 +387,24 @@ log_object = (cfg,
 log_file = 'log_000.pickle'
 with open(log_file, 'wb') as log:
     pickle.dump(log_object, log)
+
+#%%
+
+# How did we do?
+
+log_file = 'log_000.pickle'
+with open(log_file, 'rb') as log:
+    log_object = pickle.load(log)
+
+cfg, protocol, \
+train_labels, train_predictions, \
+test_labels, test_predictions = log_object
+
+# show the outcome
+print(f"\ntotal number of labels:         {len(train_labels)}\n"
+      f"total number of correct labels: {len(list(filter(lambda x: x == 1, train_labels)))}")
+
+starttime = protocol[0][0]
+print(f'\n\ntimestamp\tinfo\n')
+for timestamp, info in protocol[:]:
+    print(f'{timestamp - starttime:.6f}\t{info}')
