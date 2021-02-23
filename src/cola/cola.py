@@ -1,6 +1,5 @@
-#%%
+# %%
 ## to be copied from cola.ipynb
-
 
 
 # from https://mccormickml.com/2019/07/22/BERT-fine-tuning
@@ -10,16 +9,17 @@
 # QAware GmbH, Munich
 # 10.2.2021
 
-#%%
+# %%
 
 # uncomment this if import fails
 # !pip install wget
 
 import os
 import zipfile
+
 import wget
 
-#%%
+# %%
 
 # download and unzip raw data
 url = 'https://nyu-mll.github.io/CoLA/cola_public_1.1.zip'
@@ -38,7 +38,7 @@ if not os.path.exists(zipped_dir):
 
 print('unzipped file now at ' + unzipped_file)
 
-#%%
+# %%
 
 # uncomment this if import fails
 # !pip install transformers
@@ -59,7 +59,7 @@ from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSamp
 from transformers import BertTokenizer, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 
 
-#%%
+# %%
 
 class Logger(object):
     def __init__(self):
@@ -70,15 +70,16 @@ class Logger(object):
     def log(self, input: any) -> None:
         print(self.counter, end='')  # I am working
         self.counter = (self.counter + 1) % 10
-        self.char_counter =(self.char_counter + 1) % 80
+        self.char_counter = (self.char_counter + 1) % 80
         if self.char_counter == 0:
-          print()
+            print()
         self.protocol.append((perf_counter(), input))
 
     def getProtocol(self) -> list:
         return self.protocol
 
-#%%
+
+# %%
 
 class Learner(object):
     def __init__(self, module: torch.nn.Module,
@@ -130,7 +131,7 @@ class Learner(object):
                                              attention_mask=batch[1],
                                              labels=batch[2]).logits
             preds = torch.argmax(logits, dim=1)
-            labels = torch.cat((labels, batch[2]))    # collect labels
+            labels = torch.cat((labels, batch[2]))  # collect labels
             predictions = torch.cat((predictions, preds))  # collect predictions
 
         return labels, predictions
@@ -150,7 +151,8 @@ class Learner(object):
             self.train(dataloader, logger)
         return logger.getProtocol()
 
-#%%
+
+# %%
 
 def getDevice(cuda_desired: bool) -> torch.device:
     """
@@ -160,13 +162,14 @@ def getDevice(cuda_desired: bool) -> torch.device:
     return torch.device('cuda') if cuda_desired and torch.cuda.is_available() \
         else torch.device('cpu')
 
-#%%
+
+# %%
 
 def readSentencesLabels(filename: str,
-                       n_sentences: int,
-                       col_sentence: int,
-                       col_label: int,
-                       delimiter: str = '\t') -> tuple:
+                        n_sentences: int,
+                        col_sentence: int,
+                        col_label: int,
+                        delimiter: str = '\t') -> tuple:
     """
     @param filename: file to be read from
     @param delimiter: a delimiter
@@ -177,11 +180,12 @@ def readSentencesLabels(filename: str,
     df = pd.read_csv(filename, delimiter=delimiter, nrows=n_sentences, header=None)
     return df[col_sentence].values.tolist(), df[col_label].values.tolist()
 
-#%%
+
+# %%
 
 def tokenize(sentences: list,
-           tokenizer: BertTokenizer,
-           max_length: int) -> tuple:
+             tokenizer: BertTokenizer,
+             max_length: int) -> tuple:
     """
     @param sentences: list of sentences
     @param tokenizer: a tokenizer
@@ -214,7 +218,8 @@ def tokenize(sentences: list,
 
     return token_ids, attention_masks
 
-#%%
+
+# %%
 
 def getDataloader(token_ids: list,
                   attention_masks: list,
@@ -258,7 +263,8 @@ def getDataloader(token_ids: list,
 
     return train_dataloader, test_dataloader
 
-#%%
+
+# %%
 
 def getModule(device: torch.device) -> torch.nn.Module:
     module = BertForSequenceClassification.from_pretrained(
@@ -273,7 +279,8 @@ def getModule(device: torch.device) -> torch.nn.Module:
         module.cuda()
     return module
 
-#%%
+
+# %%
 
 def getTokenizer() -> BertTokenizer:
     """
@@ -281,7 +288,8 @@ def getTokenizer() -> BertTokenizer:
     """
     return BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-#%%
+
+# %%
 
 def getOptimizer(module: torch.nn.Module,
                  lr: float,
@@ -294,7 +302,8 @@ def getOptimizer(module: torch.nn.Module,
     """
     return AdamW(module.parameters(), lr=lr, eps=eps)
 
-#%%
+
+# %%
 
 def getSchedulerFactory(optimizer: torch.optim.Optimizer) -> Callable:
     """
@@ -306,21 +315,22 @@ def getSchedulerFactory(optimizer: torch.optim.Optimizer) -> Callable:
         return get_linear_schedule_with_warmup(optimizer,
                                                num_warmup_steps=0,
                                                num_training_steps=total_steps)
+
     return factory
 
 
-#%%
+# %%
 
 # put constants in a dictionary
-cfg = {'seed': 2,
-       'batch_size': 32,
-       'n_sentences': 1000,  # number of sentences to read
-       'max_length': 64,      # max length of sentence (guess or find out)
-       'split_factor': 0.8,   # share of training sentences
+cfg = {'seed'        : 2,
+       'batch_size'  : 32,
+       'n_sentences' : 1000,  # number of sentences to read
+       'max_length'  : 64,  # max length of sentence (guess or find out)
+       'split_factor': 0.8,  # share of training sentences
        'cuda_desired': True,  # True if cuda desired
-       'lr': 3e-5,            # learning rate of optimizer
-       'eps': 1e-8,           # stop criterion of optimizer
-       'n_epochs' : None}     # number of epochs
+       'lr'          : 3e-5,  # learning rate of optimizer
+       'eps'         : 1e-8,  # stop criterion of optimizer
+       'n_epochs'    : None}  # number of epochs
 
 seed = cfg['seed']
 batch_size = cfg['batch_size']
@@ -336,7 +346,7 @@ random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-#%%
+# %%
 
 # extract at most n sentences and labels; n = n_sentences
 unzipped_file = './cola_public/raw/in_domain_train.tsv'
@@ -350,7 +360,7 @@ k = len(list(filter(lambda x: x == 1, labels)))
 
 print(n, k)
 
-#%%
+# %%
 
 # define the algorithm
 device = getDevice(cuda_desired)  # device depending on choice and availability of cuda
@@ -367,7 +377,7 @@ token_ids, attention_masks = tokenize(sentences, tokenizer, max_length)
 train_dataloader, test_dataloader = \
     getDataloader(token_ids, attention_masks, labels, split_factor, batch_size, device)
 
-#%%
+# %%
 
 # build a learner and get going
 cfg['n_epochs'] = 4
@@ -388,7 +398,7 @@ log_file = 'log_000.pickle'
 with open(log_file, 'wb') as log:
     pickle.dump(log_object, log)
 
-#%%
+# %%
 
 # How did we do?
 
