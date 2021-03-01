@@ -107,7 +107,7 @@ class Learner(object):
             loss = self.module.forward(input_ids=batch[0],
                                        token_type_ids=None,
                                        attention_mask=batch[1],
-                                       labels=batch[2]).loss
+                                       labels=batch[2]).loss_fct
             logger.log(loss.item())
             loss.backward()  # compute gradient
             clip_grad_norm_(module.parameters(), 1.0)  # normalize gradient

@@ -1,5 +1,4 @@
-
-#%%
+# %%
 
 
 # from https://mccormickml.com/2019/07/22/BERT-fine-tuning
@@ -9,16 +8,17 @@
 # QAware GmbH, Munich
 # 10.2.2021
 
-#%%
+# %%
 
 # uncomment this if import fails
 # !pip install wget
 
 import os
 import zipfile
+
 import wget
 
-#%%
+# %%
 
 # download and unzip raw data
 
@@ -38,7 +38,7 @@ if not os.path.exists(zipped_dir):
 
 print('unzipped file now at ' + unzipped_file)
 
-#%%
+# %%
 
 from torch import Tensor
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
@@ -83,20 +83,20 @@ def showConfusionMatrix(labels, predictions: Tensor, names: list) -> None:
     """
 
     cm = confusion_matrix(labels, predictions)
-    vmax = cm.max()   # number of categories
+    vmax = cm.max()  # number of categories
     sns.heatmap(cm.T, square=True, annot=True, fmt='d', cbar=True,
                 xticklabels=names, yticklabels=names, vmin=0, vmax=vmax, cmap="YlGnBu")
     plt.xlabel = ('true label')
     plt.ylabel = ('predicted label')
     plt.show()
 
-#%%
+
+# %%
 
 # uncomment this if import fails
 # !pip install transformers
 
 # Python imports
-import random
 import pickle
 from collections.abc import Callable
 from time import perf_counter
@@ -109,10 +109,10 @@ import torch
 import torch.nn as nn
 from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSampler, SequentialSampler
-from transformers import BertTokenizer, BertForSequenceClassification, BertModel, AdamW
+from transformers import BertTokenizer, BertModel, AdamW
 
 
-#%%
+# %%
 
 class Logger(object):
     def __init__(self):
@@ -123,15 +123,16 @@ class Logger(object):
     def log(self, input: any) -> None:
         print(self.counter, end='')  # I am working
         self.counter = (self.counter + 1) % 10
-        self.char_counter =(self.char_counter + 1) % 80
+        self.char_counter = (self.char_counter + 1) % 80
         if self.char_counter == 0:
-          print()
+            print()
         self.protocol.append((perf_counter(), input))
 
     def getProtocol(self) -> list:
         return self.protocol
 
-#%%
+
+# %%
 
 class Learner(object):
     def __init__(self, module: nn.Module,
@@ -179,7 +180,7 @@ class Learner(object):
             with torch.no_grad():
                 logits = self.module(vectors)
             preds = torch.argmax(logits, dim=1)
-            targets = torch.cat((targets, labels))    # collect targets
+            targets = torch.cat((targets, labels))  # collect targets
             predictions = torch.cat((predictions, preds))  # collect predictions
 
         return targets, predictions
@@ -196,7 +197,8 @@ class Learner(object):
             self.train(dataloader, logger)
         return logger.getProtocol()
 
-#%%
+
+# %%
 
 def getDevice(cuda_desired: bool) -> torch.device:
     """
@@ -206,7 +208,8 @@ def getDevice(cuda_desired: bool) -> torch.device:
     return torch.device('cuda') if cuda_desired and torch.cuda.is_available() \
         else torch.device('cpu')
 
-#%%
+
+# %%
 
 def readSentencesLabels(filename: str,
                         n_sentences: int,
@@ -224,7 +227,8 @@ def readSentencesLabels(filename: str,
     df = pd.read_csv(filename, delimiter=delimiter, nrows=n_sentences, header=None)
     return df[col_sentence].values.tolist(), df[col_label].values.tolist()
 
-#%%
+
+# %%
 
 def tokenize(sentences: list,
              tokenizer: BertTokenizer,
@@ -255,7 +259,7 @@ def tokenize(sentences: list,
                          max_length=max_length,
                          pad_to_max_length=True,
                          return_attention_mask=True,
-                        )
+                         )
         # token_ids.append(encoded_dict['input_ids'])
         # attention_masks.append(encoded_dict['attention_mask'])
         # third entry (token_type_ids) not needed
@@ -277,7 +281,8 @@ def tokenize(sentences: list,
     vectors = torch.cat(vectors).view(len(sentences), -1)
     return vectors
 
-#%%
+
+# %%
 
 def getDataloader(token_ids: Tensor,
                   labels: Tensor,
@@ -315,7 +320,8 @@ def getDataloader(token_ids: Tensor,
 
     return train_dataloader, test_dataloader
 
-#%%
+
+# %%
 
 def getModule_for_tokenizing(device: torch.device) -> BertModel:
     module = BertModel.from_pretrained(
@@ -330,7 +336,8 @@ def getModule_for_tokenizing(device: torch.device) -> BertModel:
         module.cuda()
     return module
 
-#%%
+
+# %%
 
 def getModule(device: torch.device) -> nn.Module:
     module = nn.Linear(768, 1)
@@ -340,7 +347,8 @@ def getModule(device: torch.device) -> nn.Module:
         module.cuda()
     return module
 
-#%%
+
+# %%
 
 def getTokenizer() -> BertTokenizer:
     """
@@ -348,7 +356,8 @@ def getTokenizer() -> BertTokenizer:
     """
     return BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-#%%
+
+# %%
 
 def getOptimizer(module: nn.Module,
                  lr: float,
@@ -362,10 +371,9 @@ def getOptimizer(module: nn.Module,
     return AdamW(module.parameters(), lr=lr, eps=eps)
 
 
-#%%
+# %%
 
 if __name__ == '__main__':
-
     # # put constants in a dictionary
     # cfg = {'seed': 2,
     #    'batch_size': 16,
@@ -443,7 +451,7 @@ if __name__ == '__main__':
     # with open(log_file, 'wb') as log:
     #     pickle.dump(log_object, log)
 
-    #%%
+    # %%
     # How did we do?
 
     log_file = 'log_000.pickle'
@@ -459,7 +467,7 @@ if __name__ == '__main__':
 
     # show the outcome
     print(f"\ntotal number of train labels:         {len(train_labels)}\n"
-      f"total number of correct train labels: {len(list(filter(lambda x: x == 1, train_labels)))}")
+          f"total number of correct train labels: {len(list(filter(lambda x: x == 1, train_labels)))}")
 
     losses = [protocol[i][1] for i in range(len(protocol))
               if type(protocol[i][1]) is float]
