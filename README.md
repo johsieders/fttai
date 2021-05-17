@@ -1,2 +1,2 @@
 # fttai
-A Fast Track to AI
+Fast Track to AI
